@@ -6,12 +6,22 @@ Robot::Robot(Simulator *sim, std::string name) {
     handle = sim->getHandle(name);
 
     if (LOG) {
-        FILE *data =  fopen("gt.txt", "wt");
+        FILE *data =  fopen("gt.txt", "w");
         if (data!=NULL)
-            fclose(data);
-        data =  fopen("sonar.txt", "wt");
+          fclose(data);
+        data =  fopen("odomPose.txt", "w");
         if (data!=NULL)
-            fclose(data);
+          fclose(data);
+        data =  fopen("points.txt", "w");
+        if (data!=NULL)
+          fclose(data);
+        data =  fopen("pointsOdom.txt", "w");
+        if (data!=NULL)
+          fclose(data);
+        data =  fopen("sonar.txt", "w");
+        if (data!=NULL)
+          fclose(data);
+        
     }
 
     /* Get handles of sensors and actuators */
@@ -225,7 +235,7 @@ void Robot::followTheWall()
     else if (minRight >= 0.05 && )*/
 }
 
-void Robot::writePointsSonars(float position[])
+void Robot::writePointsSonars()
 {
   float x, y;
   if (LOG) {
@@ -235,8 +245,29 @@ void Robot::writePointsSonars(float position[])
 
       for (int i=0; i<8; ++i){
         if(sonarReadings[i] > 0){
-          x = position[0] + (sonarReadings[i] + rSonar) * cos(robotOrientation[2] + (sonarAngles[i]*M_PI)/180);
-          y = position[1] + (sonarReadings[i] + rSonar) * sin(robotOrientation[2] + (sonarAngles[i]*M_PI)/180);
+          x = robotPosition[0] + (sonarReadings[i] + rSonar) * cos(robotOrientation[2] + (sonarAngles[i]*M_PI)/180);
+          y = robotPosition[1] + (sonarReadings[i] + rSonar) * sin(robotOrientation[2] + (sonarAngles[i]*M_PI)/180);
+          fprintf(data, "%.4f \t %.4f \n", x, y);
+        }
+      }
+      fflush(data);
+      fclose(data);
+    }
+  }
+}
+
+void Robot::writePointsSonarsOdom()
+{
+  float x, y;
+  if (LOG) {
+    FILE *data =  fopen("pointsOdom.txt", "at");
+
+    if (data!=NULL){
+
+      for (int i=0; i<8; ++i){
+        if(sonarReadings[i] > 0){
+          x = odomPose[0] + (sonarReadings[i] + rSonar) * cos(robotOrientation[2] + (sonarAngles[i]*M_PI)/180);
+          y = odomPose[1] + (sonarReadings[i] + rSonar) * sin(robotOrientation[2] + (sonarAngles[i]*M_PI)/180);
           fprintf(data, "%.4f \t %.4f \n", x, y);
         }
       }
@@ -313,12 +344,17 @@ void Robot::initFuzzyController(){
   mamdani->setDisjunction(new Maximum);
   mamdani->setImplication(new AlgebraicProduct);
   mamdani->setActivation(new General);
+  
   mamdani->addRule(Rule::parse("if sensorEsq is muitoPerto and sensorDir is not muitoPerto then omega is maisDireita and vLinear is devagar", engine));
   mamdani->addRule(Rule::parse("if sensorEsq is not muitoPerto and sensorDir is muitoPerto then omega is maisEsquerda and vLinear is devagar", engine));
+  
   mamdani->addRule(Rule::parse("if sensorEsq is muitoPerto and sensorDir is muitoPerto then omega is maisEsquerda and vLinear is devagar", engine));
+  
   mamdani->addRule(Rule::parse("if sensorEsq is perto and sensorDir is perto then omega is esquerda and vLinear is normal", engine));
+  
   mamdani->addRule(Rule::parse("if sensorEsq is perto and sensorDir is longe then omega is esquerda and vLinear is normal", engine));
   mamdani->addRule(Rule::parse("if sensorEsq is longe and sensorDir is perto then omega is direita and vLinear is normal", engine));
+
   mamdani->addRule(Rule::parse("if sensorEsq is longe and sensorDir is longe then omega is zero and vLinear is rapido", engine));
   engine->addRuleBlock(mamdani);
 }
@@ -329,6 +365,7 @@ void Robot::fuzzyController(){
   std::string status;
   if (not engine->isReady(&status))
     throw Exception("[engine error] engine is not ready:n" + status, FL_AT);
+
   float maxDir, maxEsq;
   maxDir = std::max(sonarReadings[1],sonarReadings[2]);
   maxEsq = std::max(sonarReadings[5],sonarReadings[6]);
@@ -336,8 +373,8 @@ void Robot::fuzzyController(){
   sensorDir->setValue(maxDir);
   sensorEsq->setValue(maxEsq);
   engine->process();
-
-  drive(vLinear->getValue(),omega->getValue());
+  
+  //drive(vLinear->getValue(), omega->getValue());
 }
 
 //-------------------------------------End Fuzzy avoidObstacle--------------------------------------------------------
@@ -368,13 +405,6 @@ void Robot::updateSensors()
     /* Update encoder data */
     lastEncoder[0] = encoder[0];
     lastEncoder[1] = encoder[1];
-
-    /* Get the encoder data */
-    if (sim->getJointPosition(motorHandle[0], &encoder[0]) == 1)
-        std::cout << "ok left enconder"<< encoder[0] << std::endl;  // left
-    if (sim->getJointPosition(motorHandle[1], &encoder[1]) == 1)
-        std::cout << "ok right enconder"<< encoder[1] << std::endl;  // right
-
 }
 
 void Robot::updatePose()

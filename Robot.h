@@ -3,7 +3,7 @@
 
 #define NUM_SONARS  16
 #define LOG         1
-#define rSonar      0.0975
+#define rSonar      0.21
 #include <fstream>
 #include <iostream>
 #include "Simulator.h"
@@ -45,12 +45,13 @@ public:
     void setRobotState(state e);
     void checkRobotState();
     bool obstaclesInWay();
-    void writePointsSonars(float position[3]);
+    void writePointsSonars();
     void fuzzyController();
     void initFuzzyController();
     void followTheWall();
     float sonarMin(char lado);
-
+    void writePointsSonarsOdom();
+    
 private:
     const float L = 0.381;                                   // distance between wheels
     const float R = 0.0975;                                  // wheel radius

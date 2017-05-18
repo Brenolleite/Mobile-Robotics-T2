@@ -25,16 +25,17 @@ int main(int argc, char *argv[])
     robot->initFuzzyController();
     
     for (int i=0; i<3000; ++i)
-    {
-        std::cout << "Here we go... " << i << std::endl;
-
+    {        
         if (i==4)
             robot->initOdometry();
         if (i>4)
         {
             robot->update();
+            robot->writeOdom();
             robot->writeGT();
             robot->writeSonars();
+            robot->writePointsSonars();
+            robot->writePointsSonarsOdom();
         }
         extApi_sleepMs(50);
     }
